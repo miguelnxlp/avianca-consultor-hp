@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matriz de urgencia</title>
+<style>
+:root{
+  --cream:#faf8f5; --ink:#1a1510; --dim:#6a5e54; --line:rgba(26,21,16,.14); --line-strong:rgba(26,21,16,.24);
+  --accent:#e10600; --accent-text:#b30500; --accent-soft:rgba(225,6,0,.07);
+  --ok:#2f6f4e; --ok-soft:rgba(47,111,78,.09);
+  --amber:#a5720b; --amber-soft:rgba(165,114,11,.1);
+  --orange:#c2560c; --orange-soft:rgba(194,86,12,.1);
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;padding-bottom:60px}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+a.back{display:inline-block;margin:24px 0 0;font-family:var(--mono);font-size:12px;color:var(--dim);text-decoration:none}
+a.back:hover{color:var(--accent)}
+header{padding:18px 0 28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text);margin:0 0 12px}
+h1{font-size:clamp(26px,5vw,36px);font-weight:700;margin:0 0 12px;letter-spacing:-.01em}
+p.lead{color:var(--dim);font-size:14.5px;max-width:62ch;margin:0}
+
+/* barra de resultado, fija arriba */
+#result{
+  position:sticky;top:0;z-index:50;margin:0 -20px 24px;padding:16px 20px;
+  background:var(--cream);border-bottom:2px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  transition:border-color .2s;
+}
+#result .rlabel{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+#result .rlevel{font-size:22px;font-weight:800;letter-spacing:-.01em}
+#result .rscore{font-family:var(--mono);font-size:12px;color:var(--dim)}
+#result.baja{border-color:var(--ok)} #result.baja .rlevel{color:var(--ok)}
+#result.media{border-color:var(--amber)} #result.media .rlevel{color:var(--amber)}
+#result.alta{border-color:var(--orange)} #result.alta .rlevel{color:var(--orange)}
+#result.critica{border-color:var(--accent);background:var(--accent-soft)} #result.critica .rlevel{color:var(--accent)}
+
+.section{border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px;background:#fff}
+.section h2{font-size:14px;font-weight:700;margin:0 0 4px;display:flex;align-items:baseline;gap:8px}
+.section h2 .n{font-family:var(--mono);font-size:11px;color:var(--accent-text)}
+.section .hint{font-size:12.5px;color:var(--dim);margin:0 0 12px}
+.item{display:flex;gap:10px;align-items:flex-start;padding:7px 0}
+.item input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+.item label{cursor:pointer;font-size:14px}
+.item.sub{margin-left:26px;border-left:2px solid var(--line);padding-left:14px}
+.radio-row{display:flex;flex-direction:column;gap:2px}
+
+.foot-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.btn{appearance:none;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink);
+  font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 16px;border-radius:7px;transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.solid{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.solid:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.flags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.flag{font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+.qw-note{margin-top:10px;padding:10px 12px;border-radius:7px;background:var(--ok-soft);border:1px solid rgba(47,111,78,.28);font-size:13px;color:var(--ok);display:none}
+.qw-note.show{display:block}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);opacity:0;pointer-events:none;
+  background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:6px;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);z-index:80;transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">‹ Volver a materiales de la Sesión 1</a>
+  <header>
+    <p class="eyebrow">Herramienta independiente · Consultor High-Performance</p>
+    <h1>Matriz de urgencia</h1>
+    <p class="lead">Marca lo que aplique a la tarea que estás evaluando. El resultado se actualiza solo, arriba, mientras marcas. Úsala junto con tu matriz de Impacto vs. Esfuerzo, no en vez de ella.</p>
+  </header>
+
+  <div id="result" class="baja">
+    <div>
+      <div class="rlabel">Urgencia de la tarea</div>
+      <div class="rlevel" id="rlevel">BAJA</div>
+    </div>
+    <div class="rscore" id="rscore">0 puntos · sin señales críticas</div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">1</span>Impacto operacional</h2>
+    <p class="hint">¿Alguna actividad afecta la operación?</p>
+    <div class="item"><input type="checkbox" id="op-main"><label for="op-main">Sí, hay afectación operacional</label></div>
+    <div class="item sub"><input type="checkbox" id="op-cliente"><label for="op-cliente">La afectación llega hasta el cliente</label></div>
+    <div class="item sub"><input type="checkbox" id="op-costos"><label for="op-costos">La afectación genera costos</label></div>
+    <div class="item sub"><input type="checkbox" id="op-ventana"><label for="op-ventana">Ocurre dentro de una ventana planificada u operacional</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">2</span>Impacto en revenue</h2>
+    <p class="hint">Prioriza de mayor a menor según la magnitud del impacto en ingresos.</p>
+    <div class="radio-row">
+      <div class="item"><input type="radio" name="revenue" id="rev-0" value="0" checked><label for="rev-0">Sin impacto en revenue</label></div>
+      <div class="item"><input type="radio" name="revenue" id="rev-1" value="1"><label for="rev-1">Impacto bajo</label></div>
+      <div class="item"><input type="radio" name="revenue" id="rev-2" value="2"><label for="rev-2">Impacto medio</label></div>
+      <div class="item"><input type="radio" name="revenue" id="rev-3" value="3"><label for="rev-3">Impacto alto</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">3</span>Solicitud de un alto directivo</h2>
+    <div class="item"><input type="checkbox" id="directivo"><label for="directivo">La solicitud viene directamente de un alto directivo</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">4</span>Fecha de cierre del hito</h2>
+    <p class="hint">Dependencias que afectan la ruta crítica del proyecto.</p>
+    <div class="item"><input type="checkbox" id="ruta-critica"><label for="ruta-critica">Esta actividad tiene dependencias sobre la ruta crítica del proyecto</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">5</span>Impacto en valores del proyecto</h2>
+    <div class="item"><input type="checkbox" id="valores"><label for="valores">Afecta alcance, costo, cronograma o calidad del proyecto</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">6</span>Riesgos</h2>
+    <p class="hint">Cualquiera de estos marca la tarea como crítica, sin importar el resto de la matriz.</p>
+    <div class="item"><input type="checkbox" id="riesgo-seguridad"><label for="riesgo-seguridad">De seguridad</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-autoridades"><label for="riesgo-autoridades">Frente a autoridades</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-legales"><label for="riesgo-legales">Legales</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-penalizaciones"><label for="riesgo-penalizaciones">Penalizaciones</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-regulacion"><label for="riesgo-regulacion">Regulación</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-permisos"><label for="riesgo-permisos">Permisos</label></div>
+    <div class="item"><input type="checkbox" id="riesgo-reputacional"><label for="riesgo-reputacional">Reputacionales</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">7</span>Impacto en otras áreas</h2>
+    <div class="item"><input type="checkbox" id="otras-areas"><label for="otras-areas">Esta tarea impacta a otras áreas además de la tuya</label></div>
+  </div>
+
+  <div class="section">
+    <h2><span class="n">8</span>Nivel de esfuerzo</h2>
+    <div class="item"><input type="checkbox" id="quick-win"><label for="quick-win">Es un quick win: bajo esfuerzo, resultado rápido</label></div>
+    <div class="qw-note" id="qw-note">Esto no sube la urgencia, pero es un buen candidato para adelantar hoy mismo aunque no sea lo más urgente de tu lista.</div>
+  </div>
+
+  <div id="flags-wrap" class="flags"></div>
+
+  <div class="foot-actions">
+    <button class="btn" type="button" id="reset-btn">Reiniciar</button>
+    <button class="btn solid" type="button" id="copy-btn">Copiar resultado</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var RIESGOS = {
+    "riesgo-seguridad": "Riesgo de seguridad",
+    "riesgo-autoridades": "Riesgo frente a autoridades",
+    "riesgo-legales": "Riesgo legal",
+    "riesgo-penalizaciones": "Riesgo de penalización",
+    "riesgo-regulacion": "Riesgo de regulación",
+    "riesgo-permisos": "Riesgo de permisos",
+    "riesgo-reputacional": "Riesgo reputacional"
+  };
+
+  var resultEl = document.getElementById("result");
+  var rlevelEl = document.getElementById("rlevel");
+  var rscoreEl = document.getElementById("rscore");
+  var flagsWrap = document.getElementById("flags-wrap");
+  var qwNote = document.getElementById("qw-note");
+
+  function isChecked(id){ var el = document.getElementById(id); return el && el.checked; }
+
+  function compute(){
+    var critical = false;
+    var flags = [];
+    var points = 0;
+
+    var opSubs = 0;
+    if (isChecked("op-cliente")) opSubs += 1;
+    if (isChecked("op-costos")) opSubs += 1;
+    if (isChecked("op-ventana")) opSubs += 1;
+    if (isChecked("op-main") || opSubs > 0){
+      points += 1 + opSubs;
+    }
+
+    var revEl = document.querySelector('input[name="revenue"]:checked');
+    points += revEl ? parseInt(revEl.value, 10) : 0;
+
+    if (isChecked("directivo")){ critical = true; flags.push("Solicitud de un alto directivo"); }
+    if (isChecked("ruta-critica")){ critical = true; flags.push("Afecta la ruta crítica del proyecto"); }
+    if (isChecked("valores")) points += 2;
+
+    Object.keys(RIESGOS).forEach(function(id){
+      if (isChecked(id)){ critical = true; flags.push(RIESGOS[id]); }
+    });
+
+    if (isChecked("otras-areas")) points += 1;
+
+    var level, cls;
+    if (critical){ level = "CRÍTICA"; cls = "critica"; }
+    else if (points >= 6){ level = "ALTA"; cls = "alta"; }
+    else if (points >= 3){ level = "MEDIA"; cls = "media"; }
+    else { level = "BAJA"; cls = "baja"; }
+
+    resultEl.className = cls;
+    rlevelEl.textContent = level;
+    rscoreEl.textContent = points + " punto" + (points === 1 ? "" : "s") + (flags.length ? " · " + flags.length + " señal crítica" + (flags.length === 1 ? "" : "es") : " · sin señales críticas");
+
+    flagsWrap.innerHTML = "";
+    flags.forEach(function(f){
+      var span = document.createElement("span");
+      span.className = "flag";
+      span.textContent = f;
+      flagsWrap.appendChild(span);
+    });
+
+    qwNote.classList.toggle("show", isChecked("quick-win"));
+
+    return { level: level, points: points, flags: flags };
+  }
+
+  document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input){
+    input.addEventListener("change", compute);
+  });
+
+  /* Sincroniza visualmente el check padre de Impacto operacional:
+     si cualquier sub-ítem queda marcado, el padre se marca solo,
+     para que el checklist nunca se vea contradictorio. */
+  ["op-cliente", "op-costos", "op-ventana"].forEach(function(id){
+    document.getElementById(id).addEventListener("change", function(){
+      var anyChecked = isChecked("op-cliente") || isChecked("op-costos") || isChecked("op-ventana");
+      if (anyChecked) document.getElementById("op-main").checked = true;
+    });
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", function(){
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(i){ i.checked = false; });
+    document.getElementById("rev-0").checked = true;
+    compute();
+  });
+
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, 1800);
+  }
+
+  document.getElementById("copy-btn").addEventListener("click", function(){
+    var r = compute();
+    var lines = ["Matriz de urgencia", "Resultado: " + r.level + " (" + r.points + " puntos)"];
+    if (r.flags.length) lines.push("Señales críticas: " + r.flags.join(", "));
+    if (isChecked("quick-win")) lines.push("Marcada como quick win.");
+    var text = lines.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ toast("Copiado"); });
+    } else {
+      toast("Selecciona y copia el texto manualmente");
+    }
+  });
+
+  compute();
+})();
+</script>
+</body>
+</html>
